@@ -1,5 +1,8 @@
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass'
 import { Vector3 } from 'three'
 import './styles/background.css'
 
@@ -14,17 +17,22 @@ export default function Background() {
 
   useEffect(() => {
     const canvas = canvasRef.current as HTMLCanvasElement
-    const renderer = new THREE.WebGLRenderer({ canvas })
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+    })
 
     renderer.setSize(window.innerWidth, window.innerHeight)
 
     const fov = 75
-    const aspect = 2 // the canvas default;
+    const aspect = window.innerWidth / window.innerHeight
     const near = 0.1
     const far = 5
     const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
     camera.position.z = 2
     const scene = new THREE.Scene()
+
+    scene.add(new THREE.AmbientLight(0x404040))
 
     const spheres: Sphere[] = []
 
@@ -62,7 +70,18 @@ export default function Background() {
       )
     }
 
-    renderer.render(scene, camera)
+    const composer = new EffectComposer(renderer)
+
+    const renderPass = new RenderPass(scene, camera)
+    composer.addPass(renderPass)
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      1,
+      0.4,
+      0.5
+    )
+    composer.addPass(bloomPass)
 
     const animate = () => {
       requestAnimationFrame(animate)
@@ -78,7 +97,7 @@ export default function Background() {
           sphere.velocity.z *= -1
         }
       })
-      renderer.render(scene, camera)
+      composer.render()
     }
 
     animate()
